@@ -122,26 +122,20 @@ class AndonByShiftModel(BaseModel):
             }
 
         return {
-            "First Shift": {
+            "first": {
                 "Equipment": first_shift_summary_equipment,
                 "Automation": first_shift_summary_automation
             },
-            "Second Shift": {
+            "second": {
                 "Equipment": second_shift_summary_equipment,
                 "Automation": second_shift_summary_automation
             },
-            "Third Shift": {
+            "third": {
                 "Equipment": third_shift_summary_equipment,
                 "Automation": third_shift_summary_automation
             }
         }
 
-
-
-
-
-
-# dict[str, list[AndonBaseModel]]
 class AndonGroupsModel(BaseModel):
     area_frontend: AndonByShiftModel
     area_backend: AndonByShiftModel

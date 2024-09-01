@@ -1,5 +1,4 @@
 /files
 .idea/
 __pycache__/
-files/
-*.env
+/.idea/
