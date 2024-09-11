@@ -91,6 +91,7 @@ if __name__ == '__main__':
     _logs = read_logs_by_date("C:/data/fuzion-1_j01_top", "2024-08-20")
     _segregation = logs_segregation(_logs)
 
+    print(json.dumps(_segregation["rejected_componentes"], indent=4))
 
 
     # print(json.dumps(_segregation["statistics"], indent=4))

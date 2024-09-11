@@ -4,6 +4,7 @@ from enum import Enum
 from itertools import cycle
 from os import system
 import uuid
+import re
 from utils.file_management_util import su_save_json_file
 from utils.ql_util import qa_transform_str_time_subtract, qa_transform_seconds_to
 
@@ -226,14 +227,41 @@ def logs_analyser(data: dict):
     pass
 
 def rejected_components(data: list[dict])-> dict:
-    _total = 0
+    _rejected = []
     for record in data:
-        print(str(record['text']).split(".")[1].split(':')[1]) # Component
-        print(str(record['text']).split(".")[2].split(':')[1]) # Reference
-        print(str(record['text']).split(".")[3].split(':')[1]) # Reference
-        print(str(record['text']).split(".")[4].split(':')[1]) # Reference
+        _rejected.append(extract_log_rejected_components(record['text'], record['time']))
+
+    _grouped_by_component = {}
+    for record in _rejected:
+        if record['component'] not in _grouped_by_component:
+            _grouped_by_component[record['component']] = []
+        _grouped_by_component[record['component']].append(
+            {
+                "time": record['time'],
+                "reference_id": record['reference_id'],
+                "head": record['head'],
+                "spindle": record['spindle'],
+                "slot": record['slot'],
+                "track": record['track'],
+                "lane": record['lane'],
+                "pattern_step": record['pattern_step'],
+            }
+        )
+    _component_statistic = []
+    for key, value in _grouped_by_component.items():
+        _component_statistic.append({
+            "component": key,
+            "total": len(value),
+            "times": [record['time'] for record in value],
+            # "locations": [record['reference_id'] for record in value],
+            # "slots": [record['slot'] for record in value],
+        })
+
+
     return {
-        "total": _total
+        "total": len(_rejected),
+        "rejected": _rejected,
+        "statistic": _component_statistic
     }
 def cycle_time_per_hour(data: list[dict])-> list[dict]:
     # Group the data by hour. e.g. 00:00:00 - 01:00:00
@@ -268,6 +296,9 @@ def cycle_time_per_hour(data: list[dict])-> list[dict]:
 
     return _cycle_time_per_hour
 
+
+
+
 def transform_message_to_event_code(message: str) -> EventCode | None:
     # Extract the event code from the message
     if (
@@ -287,6 +318,43 @@ def transform_message_to_event_code(message: str) -> EventCode | None:
         return EventCode.DEBUG
     else:
         return EventCode.NONE
+
+
+def extract_log_rejected_components(log_message: str, time: str) -> dict:
+    # Define regular expressions to match each part of the log message
+    component_pattern = r'Component rejected. Component: ([\w-]+)'
+    reference_id_pattern = r'Reference ID: (\w+)'
+    head_pattern = r'Head: (\w+)'
+    spindle_pattern = r'Spindle: (\d+)'
+    slot_pattern = r'Slot: (\d+)'
+    track_pattern = r'Track: (\d+)'
+    lane_pattern = r'Lane: (\d+)'
+    pattern_step_pattern = r'Pattern Step: (\d+)'
+
+    # Extract the data using regular expressions
+    component = re.search(component_pattern, log_message)
+    reference_id = re.search(reference_id_pattern, log_message)
+    head = re.search(head_pattern, log_message)
+    spindle = re.search(spindle_pattern, log_message)
+    slot = re.search(slot_pattern, log_message)
+    track = re.search(track_pattern, log_message)
+    lane = re.search(lane_pattern, log_message)
+    pattern_step = re.search(pattern_step_pattern, log_message)
+
+    # Store extracted data in a dictionary
+    rejected_component_log_data = {
+        "time": time,
+        "component": component.group(1) if component else None,
+        "reference_id": reference_id.group(1) if reference_id else None,
+        "head": head.group(1) if head else None,
+        "spindle": spindle.group(1) if spindle else None,
+        "slot": slot.group(1) if slot else None,
+        "track": track.group(1) if track else None,
+        "lane": lane.group(1) if lane else None,
+        "pattern_step": pattern_step.group(1) if pattern_step else None,
+    }
+
+    return rejected_component_log_data
 
 
 
