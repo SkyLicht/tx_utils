@@ -1,9 +1,10 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pandas as pd
 
 from andon.andon_translate import translate_andon_data
-from utils.file_management import su_read_excel_file, su_dict_group_by, convert_epoch_to_date, update_dict_in_list
+from utils.file_management_util import su_read_excel_file, su_dict_group_by, convert_epoch_to_date, update_dict_in_list, \
+    add_key_dict_in_list
 
 
 def read_andon_file(path: str) -> list[dict]:
@@ -22,7 +23,7 @@ def read_andon_file(path: str) -> list[dict]:
     )
     return _filtered
 
-
+# Make another func to collect data where the filter is the finish date
 def collect_data(data: dict[str, list[dict]], lambda_func)-> list[dict]:
     # Collect data that meet the condition
     # If there are more than one record, append the one with the greater finish date
@@ -63,11 +64,12 @@ def grouped_data_using_df(data: list[dict], args: list[str])-> list[dict]:
     return grouped_df.to_dict(orient="records")
 
 
-def week_report(path: str)-> list[dict]:
+def report(path: str)-> list[dict]:
 
     _data = su_read_excel_file(path)
     if not _data:
         return []
+
     # Group and clean data
     _group_by_id = su_dict_group_by(translate_andon_data(_data), "alerts_id")
 
@@ -79,6 +81,14 @@ def week_report(path: str)-> list[dict]:
         key= "date",
         lambda_func= lambda x: convert_epoch_to_date(_epoch_time= x, _format='%Y-%m-%d')
     )
+
+
+    add_key_dict_in_list(
+        data= _collected,
+        new_key= "week",
+        lambda_func= lambda x: datetime.strptime(x['date'], '%Y-%m-%d').isocalendar()[1]
+    )
+
 
     update_dict_in_list(
         data= _collected,
@@ -100,11 +110,12 @@ def week_report(path: str)-> list[dict]:
 
     _grouped_by_date = su_dict_group_by(_collected, "date")
 
-    _return_list = []
+
+    _return_list = [_r for _r in _grouped_by_date.values()]
+
     for _record in _grouped_by_date.values():
         for r in _record:
             print(r)
-            _return_list.append(r)
         # filter_by_fuzion = list(
         #     filter(
         #         lambda x: x.get("level_2") == "Fuzion" or x.get("level_2") == "Fuzion DIMM",
@@ -113,11 +124,21 @@ def week_report(path: str)-> list[dict]:
         # )
         # for r in filter_by_fuzion:
         #     print(r)
-
-
+    # for _record in _grouped_by_date.values():
+    #     for r in _record:
+    #         #print(r)
+    #         _return_list.append(r)
+        # filter_by_fuzion = list(
+        #     filter(
+        #         lambda x: x.get("level_2") == "Fuzion" or x.get("level_2") == "Fuzion DIMM",
+        #         _record
+        #     )
+        # )
+        # for r in filter_by_fuzion:
+        #     print(r)
     #Save to excel
-    df = pd.DataFrame(_return_list)
-    df.to_excel("../files/andons/out/week_report_35.xlsx", index=False)
+    # df = pd.DataFrame(_return_list)
+    # df.to_excel("../files/andons/out/past_two_months.xlsx", index=False)
 
 
     return []
@@ -125,7 +146,7 @@ def week_report(path: str)-> list[dict]:
 
 if __name__ == '__main__':
 
-    _week_report = week_report("../files/andons/in/week/andon_week_35.xlsx")
+    _week_report = report("../files/andons/in/report/andon_2024-07-to-2024-08.xlsx")
     # _data = read_andon_file("../files/andons/in/andon_2024-08-27.xlsx")
     # for d in _data:
     #     print(d)
